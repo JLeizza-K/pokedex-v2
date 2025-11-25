@@ -2,6 +2,12 @@ import { Form, redirect } from "react-router";
 import * as v from "valibot";
 import type { Route } from "./+types/home";
 
+const INTENT = {
+  CAPTURE: "capture",
+  RELEASE: "release",
+  FILTER: "filter",
+};
+
 const PokemonResultsSchema = v.object({
   name: v.string(),
   url: v.string(),
@@ -27,20 +33,41 @@ const PokemonSchema = v.object({
 });
 
 type Pokemon = v.InferOutput<typeof PokemonSchema>;
-type ActionType = "capture" | "release";
 
 export async function action({ request }: Route.LoaderArgs) {
   const formData = await request.formData();
-  const pokemonIdString = v.parse(v.string(), formData.get("pokemonId"));
-  const buttonAction = v.parse(v.string(), formData.get("action"));
+  const intent = v.parse(v.string(), formData.get("intent"));
+
   const url = new URL(request.url);
 
   const params = url.searchParams.get("captured");
   const captured = new Set<number>(params ? JSON.parse(params) : []);
-  if (buttonAction === "capture") {
-    captured.add(Number(pokemonIdString));
-  } else if (buttonAction === "release") {
-    captured.delete(Number(pokemonIdString));
+  switch (intent) {
+    case INTENT.CAPTURE: {
+      const pokemonIdString = v.parse(v.string(), formData.get("pokemonId"));
+      captured.add(Number(pokemonIdString));
+      break;
+    }
+    case INTENT.RELEASE: {
+      const pokemonIdString = v.parse(v.string(), formData.get("pokemonId"));
+      captured.delete(Number(pokemonIdString));
+      break;
+    }
+    case INTENT.FILTER: {
+      const filterName = v.parse(v.string(), formData.get("filterName"));
+      const filterType = v.parse(v.string(), formData.get("filterType"));
+      if (filterName) {
+        url.searchParams.set("filterName", filterName);
+      } else {
+        url.searchParams.delete("filterName");
+      }
+      if (filterType) {
+        url.searchParams.set("filterType", filterType);
+      } else {
+        url.searchParams.delete("filterType");
+      }
+      break;
+    }
   }
 
   url.searchParams.set("captured", JSON.stringify(Array.from(captured)));
@@ -52,9 +79,11 @@ export async function loader({ request }: Route.LoaderArgs) {
   const url = new URL(request.url);
   const params = url.searchParams.get("captured");
   const capturedIds = new Set<number>(params ? JSON.parse(params) : []);
+  const filterName = url.searchParams.get("filterName") || "";
+  const filterType = url.searchParams.get("filterType") || "";
 
   const response = await fetch(
-    "https://pokeapi.co/api/v2/pokemon?limit=20&offset=0",
+    "https://pokeapi.co/api/v2/pokemon?limit=24&offset=0",
   );
 
   const data = await response.json();
@@ -71,23 +100,64 @@ export async function loader({ request }: Route.LoaderArgs) {
       return pokemon;
     }),
   );
+  let displayedPokemons = pokemons;
 
+  if (filterName) {
+    displayedPokemons = displayedPokemons.filter((pokemon) => {
+      return pokemon.name.toLowerCase().includes(filterName.toLowerCase());
+    });
+  }
+
+  if (filterType) {
+    displayedPokemons = displayedPokemons.filter((pokemon) => {
+      return pokemon.types.some((type) => {
+        return type.type.name === filterType;
+      });
+    });
+  }
   const captured = pokemons.filter((pokemon) => {
     return capturedIds.has(pokemon.id);
   });
 
-  return { pokemons, captured };
+  return { pokemons, captured, displayedPokemons };
 }
 
 export default function Home({ loaderData }: Route.ComponentProps) {
-  const { pokemons, captured } = loaderData;
+  const { captured, pokemons, displayedPokemons } = loaderData;
 
   return (
     <>
-      <h1 className="page-title">Pokedex</h1>
+      <p className="page-title">Pokedex</p>
+      <Form method="POST">
+        <input className="filter" type="search" name="filterName" />
+        <select className="filter" name="filterType">
+          <option value="">All types</option>
+          {Array.from(
+            new Set(
+              pokemons.flatMap((pokemon) =>
+                pokemon.types.map((t) => t.type.name),
+              ),
+            ),
+          ).map((type) => (
+            <option key={type} value={type}>
+              {type}
+            </option>
+          ))}
+        </select>
+        <button type="submit">Filter pokemon</button>
+        <input type="hidden" name="intent" value={INTENT.FILTER} />
+      </Form>
       <main className="main-container">
-        <PokemonGrid pokemons={pokemons} buttonLabel="+" actionType="capture" />
-        <PokemonGrid pokemons={captured} buttonLabel="-" actionType="release" />
+        <PokemonGrid
+          pokemons={displayedPokemons}
+          buttonLabel="+"
+          actionType={INTENT.CAPTURE}
+        />
+        <PokemonGrid
+          pokemons={captured}
+          buttonLabel="-"
+          actionType={INTENT.RELEASE}
+        />
       </main>
     </>
   );
@@ -100,7 +170,7 @@ function PokemonGrid({
 }: {
   pokemons: Pokemon[];
   buttonLabel: string;
-  actionType: ActionType;
+  actionType: string;
 }) {
   return (
     <div className="pokemon-grid">
@@ -117,7 +187,7 @@ function PokemonGrid({
               })}
             </ul>
             <Form method="POST">
-              <input type="hidden" name="action" value={actionType} />
+              <input type="hidden" name="intent" value={actionType} />
               <input type="hidden" name="pokemonId" value={pokemon.id} />
               <button type="submit">{buttonLabel}</button>
             </Form>
