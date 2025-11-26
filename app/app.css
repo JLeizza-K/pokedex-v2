@@ -14,64 +14,72 @@ body {
   }
 }
 
-
 .page-title {
   color: white;
   font-size: 30px;
   padding: 10px;
-  display:inline-block;
+  display: inline-block;
+}
+
+.filter {
+  border: 2px solid rgb(201, 16, 16);
+  border-radius: 6px;
+  background-color: white;
+  margin-bottom: 20px;
+  color:black;
+  
 }
 
 .main-container {
-	display: grid;
-	grid-template-columns: 1fr 1fr;
-	gap: 5%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5%;
 }
 
 .pokemon-grid {
-	display: grid;
-	grid-template-columns: repeat(6, 16%);
-	grid-auto-rows: 200px;
-	gap: 1%;
-	width: 100%;
-	height: 1200px;
+  display: grid;
+  grid-template-columns: repeat(6, 16%);
+  grid-auto-rows: 200px;
+  gap: 1%;
+  width: 100%;
+  height: 1200px;
 }
 
 .card {
-	width: 100px;
-	height: 165px;
-	align-self: flex-start;
-	background-color: rgb(201, 16, 16);
-	border-radius: 8px;
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	text-align: center;
+  width: 100px;
+  height: 165px;
+  align-self: flex-start;
+  background-color: rgb(201, 16, 16);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
 }
 .card img {
-	width: 100px;
-	height: 100px;
-	object-fit: contain;
+  width: 100px;
+  height: 100px;
+  object-fit: contain;
 }
 .card p {
-	font-size: 15px;
-	color: black;
-	font-weight: bold;
-	text-transform: capitalize;
+  font-size: 15px;
+  color: black;
+  font-weight: bold;
+  text-transform: capitalize;
 }
 
 .card ul {
-	list-style: none;
-	color: gray;
-	padding: 0;
-	display: flex;
-	gap: 10;
+  list-style: none;
+  color: gray;
+  padding: 0;
+  display: flex;
+  gap: 10;
 }
 
 .card li {
-	background-color: #e0e0e0;
-	padding: 2px 4px;
-	border-radius: 12px;
-	font-size: 9px;
-	text-transform: capitalize;
+  background-color: #e0e0e0;
+  padding: 2px 4px;
+  border-radius: 12px;
+  font-size: 9px;
+  text-transform: capitalize;
 }
