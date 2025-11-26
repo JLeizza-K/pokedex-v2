@@ -32,6 +32,12 @@ const PokemonSchema = v.object({
   types: v.array(TypesSchema),
 });
 
+const SetSchema = v.pipe(
+  v.array(v.number()),
+  v.transform((array) => {
+    return new Set(array);
+  }),
+);
 type Pokemon = v.InferOutput<typeof PokemonSchema>;
 
 export async function action({ request }: Route.LoaderArgs) {
@@ -41,7 +47,14 @@ export async function action({ request }: Route.LoaderArgs) {
   const url = new URL(request.url);
 
   const params = url.searchParams.get("captured");
-  const captured = new Set<number>(params ? JSON.parse(params) : []);
+  let captured: Set<number>;
+  if (params) {
+    const data = JSON.parse(params);
+    captured = v.parse(SetSchema, data);
+  } else {
+    captured = new Set<number>();
+  }
+
   switch (intent) {
     case INTENT.CAPTURE: {
       const pokemonIdString = v.parse(v.string(), formData.get("pokemonId"));
@@ -115,15 +128,15 @@ export async function loader({ request }: Route.LoaderArgs) {
       });
     });
   }
-  const captured = pokemons.filter((pokemon) => {
+  const capturedPokemons = pokemons.filter((pokemon) => {
     return capturedIds.has(pokemon.id);
   });
 
-  return { pokemons, captured, displayedPokemons };
+  return { pokemons, capturedPokemons, displayedPokemons };
 }
 
 export default function Home({ loaderData }: Route.ComponentProps) {
-  const { captured, pokemons, displayedPokemons } = loaderData;
+  const { capturedPokemons, pokemons, displayedPokemons } = loaderData;
 
   return (
     <>
@@ -154,7 +167,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           actionType={INTENT.CAPTURE}
         />
         <PokemonGrid
-          pokemons={captured}
+          pokemons={capturedPokemons}
           buttonLabel="-"
           actionType={INTENT.RELEASE}
         />
