@@ -27,6 +27,8 @@ const PokemonSchema = v.object({
 });
 
 type Pokemon = v.InferOutput<typeof PokemonSchema>;
+//  TODO: use correct structure of "intent" (ActionType in your case)
+// in the video I show using an object
 type ActionType = "capture" | "release";
 
 export async function action({ request }: Route.LoaderArgs) {
@@ -35,7 +37,10 @@ export async function action({ request }: Route.LoaderArgs) {
   const buttonAction = v.parse(v.string(), formData.get("action"));
   const url = new URL(request.url);
 
+  // TODO: you should use "switch" instead of if/else if
   const params = url.searchParams.get("captured");
+  // TODO: you should validate the result of a `JSON.parse` operation
+  // as we did with `fetch` or `localStorage.getItem`
   const captured = new Set<number>(params ? JSON.parse(params) : []);
   if (buttonAction === "capture") {
     captured.add(Number(pokemonIdString));
@@ -51,6 +56,8 @@ export async function action({ request }: Route.LoaderArgs) {
 export async function loader({ request }: Route.LoaderArgs) {
   const url = new URL(request.url);
   const params = url.searchParams.get("captured");
+  // TODO: you should validate the result of a `JSON.parse` operation,
+  // as we did with `fetch` or `localStorage.getItem`
   const capturedIds = new Set<number>(params ? JSON.parse(params) : []);
 
   const response = await fetch(
@@ -72,6 +79,9 @@ export async function loader({ request }: Route.LoaderArgs) {
     }),
   );
 
+  // TODO: rename this variable
+  // "captured" what? are these "ids", are these whole "pokemons"?
+  // I can't know by a simple glance, and that's the whole point
   const captured = pokemons.filter((pokemon) => {
     return capturedIds.has(pokemon.id);
   });
@@ -86,6 +96,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
     <>
       <h1 className="page-title">Pokedex</h1>
       <main className="main-container">
+        {/* great usage of grid and componentization */}
         <PokemonGrid pokemons={pokemons} buttonLabel="+" actionType="capture" />
         <PokemonGrid pokemons={captured} buttonLabel="-" actionType="release" />
       </main>
