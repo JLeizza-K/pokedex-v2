@@ -1,4 +1,4 @@
-import { Form, redirect } from "react-router";
+import { Form, redirect, useFetcher } from "react-router";
 import * as v from "valibot";
 import type { Route } from "./+types/home";
 
@@ -57,13 +57,13 @@ export async function action({ request }: Route.LoaderArgs) {
 
   switch (intent) {
     case INTENT.CAPTURE: {
-      const pokemonIdString = v.parse(v.string(), formData.get("pokemonId"));
-      captured.add(Number(pokemonIdString));
+      const pokemonId = v.parse(v.string(), formData.get("pokemonId"));
+      captured.add(Number(pokemonId));
       break;
     }
     case INTENT.RELEASE: {
-      const pokemonIdString = v.parse(v.string(), formData.get("pokemonId"));
-      captured.delete(Number(pokemonIdString));
+      const pokemonId = v.parse(v.string(), formData.get("pokemonId"));
+      captured.delete(Number(pokemonId));
       break;
     }
     case INTENT.FILTER: {
@@ -92,8 +92,9 @@ export async function loader({ request }: Route.LoaderArgs) {
   const url = new URL(request.url);
   const params = url.searchParams.get("captured");
   const capturedIds = new Set<number>(params ? JSON.parse(params) : []);
-  const filterName = url.searchParams.get("filterName") || "";
-  const filterType = url.searchParams.get("filterType") || "";
+  // this `??` is specifically to assign default values to null or undefined
+  const filterName = url.searchParams.get("filterName") ?? "";
+  const filterType = url.searchParams.get("filterType") ?? "";
 
   const response = await fetch(
     "https://pokeapi.co/api/v2/pokemon?limit=24&offset=0",
@@ -113,14 +114,16 @@ export async function loader({ request }: Route.LoaderArgs) {
       return pokemon;
     }),
   );
-  let displayedPokemons = pokemons;
 
+  // TODO: rewrite this using "pure" array methods. This means that you will
+  // aim not to reasign a value to displayedPokemons. Instead you should chain
+  // ".filter" together to archieve the same result
+  const displayedPokemons = pokemons;
   if (filterName) {
     displayedPokemons = displayedPokemons.filter((pokemon) => {
       return pokemon.name.toLowerCase().includes(filterName.toLowerCase());
     });
   }
-
   if (filterType) {
     displayedPokemons = displayedPokemons.filter((pokemon) => {
       return pokemon.types.some((type) => {
@@ -137,11 +140,16 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 export default function Home({ loaderData }: Route.ComponentProps) {
   const { capturedPokemons, pokemons, displayedPokemons } = loaderData;
+  const fetcher = useFetcher();
 
   return (
     <>
       <p className="page-title">Pokedex</p>
-      <Form method="POST">
+      <fetcher.Form
+        onChange={(event) => {
+          fetcher.submit(event.currentTarget, { method: "POST" });
+        }}
+      >
         <input className="filter" type="search" name="filterName" />
         <select className="filter" name="filterType">
           <option value="">All types</option>
@@ -157,9 +165,8 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             </option>
           ))}
         </select>
-        <button type="submit">Filter pokemon</button>
         <input type="hidden" name="intent" value={INTENT.FILTER} />
-      </Form>
+      </fetcher.Form>
       <main className="main-container">
         <PokemonGrid
           pokemons={displayedPokemons}
@@ -188,15 +195,15 @@ function PokemonGrid({
   return (
     <div className="pokemon-grid">
       {pokemons.map((pokemon, index) => {
-        const pokeId = `Poke-${index}`;
+        const id = `Poke-${index}`;
         return (
-          <div key={pokeId} className="card">
+          <div key={id} className="card">
             <img src={pokemon.sprites.front_default} alt={pokemon.name} />
             <p>{pokemon.name}</p>
             <ul>
               {pokemon.types.map((type, index) => {
-                const pokeTypeId = `PokeType-${index}`;
-                return <li key={pokeTypeId}>{type.type.name}</li>;
+                const id = `PokeType-${index}`;
+                return <li key={id}>{type.type.name}</li>;
               })}
             </ul>
             <Form method="POST">
