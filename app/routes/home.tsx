@@ -114,23 +114,23 @@ export async function loader({ request }: Route.LoaderArgs) {
       return pokemon;
     }),
   );
+  const displayedPokemons = pokemons
+    .filter((pokemon) => {
+      if (!filterName) {
+        return true;
+      }
 
-  // TODO: rewrite this using "pure" array methods. This means that you will
-  // aim not to reasign a value to displayedPokemons. Instead you should chain
-  // ".filter" together to archieve the same result
-  const displayedPokemons = pokemons;
-  if (filterName) {
-    displayedPokemons = displayedPokemons.filter((pokemon) => {
       return pokemon.name.toLowerCase().includes(filterName.toLowerCase());
-    });
-  }
-  if (filterType) {
-    displayedPokemons = displayedPokemons.filter((pokemon) => {
+    })
+    .filter((pokemon) => {
+      if (!filterType) {
+        return true;
+      }
       return pokemon.types.some((type) => {
         return type.type.name === filterType;
       });
     });
-  }
+
   const capturedPokemons = pokemons.filter((pokemon) => {
     return capturedIds.has(pokemon.id);
   });
@@ -141,7 +141,6 @@ export async function loader({ request }: Route.LoaderArgs) {
 export default function Home({ loaderData }: Route.ComponentProps) {
   const { capturedPokemons, pokemons, displayedPokemons } = loaderData;
   const fetcher = useFetcher();
-
   return (
     <>
       <p className="page-title">Pokedex</p>
